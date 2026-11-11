@@ -10,6 +10,8 @@
 #   bash sauvegarde-kali.sh
 #
 # Relançable sans risque : restic ne réenvoie que ce qui a changé.
+# Les sauvegardes tournent avec sudo : beaucoup de fichiers créés par Docker,
+# Exegol ou des commandes sudo appartiennent à root et sont illisibles sinon.
 set -euo pipefail
 
 T7="/mnt/2To_lucas"
@@ -20,7 +22,19 @@ H="$HOME"
 titre() { printf '\n\033[1;34m== %s\033[0m\n' "$*"; }
 oui() { read -rp "$1 [o/N] " r; [ "${r,,}" = o ]; }
 
-command -v restic >/dev/null || { echo "Installe restic d'abord : sudo apt install restic" >&2; exit 1; }
+RESTIC="$(command -v restic)" || { echo "Installe restic d'abord : sudo apt install restic" >&2; exit 1; }
+sudo -v # mot de passe sudo demandé dès le début
+
+# restic en root ; le code 3 (« certains fichiers illisibles ») n'arrête pas le script
+sauve() {
+  local rc=0
+  sudo --preserve-env=RESTIC_REPOSITORY,RESTIC_PASSWORD "$RESTIC" backup "$@" || rc=$?
+  if [ "$rc" -eq 3 ]; then
+    echo "⚠ Certains fichiers n'ont pas pu être lus (liste ci-dessus) : la sauvegarde continue."
+  elif [ "$rc" -ne 0 ]; then
+    return "$rc"
+  fi
+}
 mountpoint -q "$T7" || { echo "Le T7 Shield n'est pas monté sur $T7" >&2; exit 1; }
 df -h "$T7" | tail -1
 
@@ -49,7 +63,7 @@ echo "→ $INV (inclus dans la sauvegarde du home)"
 
 # ── 2. Home (sans caches ni fichiers régénérables) ────────────────────
 titre "Home ($H)"
-restic backup "$H" --tag kali-home --exclude-caches \
+sauve "$H" --tag kali-home --exclude-caches \
   --exclude "$H/VirtualBox VMs" \
   --exclude "$H/.cache" \
   --exclude "$H/.npm" \
@@ -72,7 +86,7 @@ for p in homelab Script Git Downloads/leak \
   .claude .claude.json .config/Claude/claude_desktop_config.json \
   .config/Code/User .ssh .gnupg inventaire-kali; do
   [ -e "$H/$p" ] || { printf '  - %s (absent de la Kali)\n' "$p"; continue; }
-  if restic ls latest --tag kali-home "$H/$p" 2>/dev/null | grep -q .; then
+  if sudo --preserve-env=RESTIC_REPOSITORY,RESTIC_PASSWORD "$RESTIC" ls latest --tag kali-home "$H/$p" 2>/dev/null | grep -q .; then
     printf '  \033[32m✔\033[0m %s\n' "$p"
   else
     printf '  \033[31m✘ %s MANQUANT dans la sauvegarde\033[0m\n' "$p"
@@ -85,7 +99,7 @@ for vm in "$H/VirtualBox VMs"/*/; do
   [ -d "$vm" ] || continue
   taille="$(du -sh "$vm" | cut -f1)"
   if oui "Sauvegarder la VM « $(basename "$vm") » ($taille) ?"; then
-    restic backup "$vm" --tag vm
+    sauve "$vm" --tag vm
   fi
 done
 
@@ -99,12 +113,12 @@ if mountpoint -q "$WIN"; then
   done
   if [ "${#essentiels[@]}" -gt 0 ]; then
     echo "Essentiels : ${essentiels[*]##*/}"
-    restic backup "${essentiels[@]}" --tag windows
+    sauve "${essentiels[@]}" --tag windows
   fi
   for d in Downloads "VirtualBox VMs"; do
     [ -e "$U/$d" ] || continue
     taille="$(du -sh "$U/$d" 2>/dev/null | cut -f1)"
-    oui "Sauvegarder Windows « $d » ($taille) ?" && restic backup "$U/$d" --tag windows
+    if oui "Sauvegarder Windows « $d » ($taille) ?"; then sauve "$U/$d" --tag windows; fi
   done
 else
   echo "⚠ Partition Windows non montée ($WIN) : ouvre-la dans le gestionnaire de fichiers puis relance."
@@ -113,7 +127,7 @@ fi
 # ── 5. Modèles Ollama (Kingston) ──────────────────────────────────────
 titre "Modèles Ollama"
 if [ -d /mnt/ollama-models ] && oui "Sauvegarder /mnt/ollama-models ($(du -sh /mnt/ollama-models 2>/dev/null | cut -f1)) ? (sinon : à retélécharger)"; then
-  restic backup /mnt/ollama-models --tag ollama
+  sauve /mnt/ollama-models --tag ollama
 fi
 
 # ── 6. Volumes Docker (bases de données des projets, etc.) ────────────
@@ -121,14 +135,15 @@ titre "Volumes Docker"
 if oui "Sauvegarder les volumes Docker ? (les conteneurs seront arrêtés pendant la copie)"; then
   mapfile -t actifs < <(docker ps -q)
   [ "${#actifs[@]}" -gt 0 ] && docker stop "${actifs[@]}" >/dev/null
-  sudo --preserve-env=RESTIC_REPOSITORY,RESTIC_PASSWORD "$(command -v restic)" backup /var/lib/docker/volumes --tag docker
+  sauve /var/lib/docker/volumes --tag docker
   [ "${#actifs[@]}" -gt 0 ] && docker start "${actifs[@]}" >/dev/null
 fi
 
 # ── 7. Vérification ───────────────────────────────────────────────────
 titre "Vérification de l'intégrité"
-restic check
-restic snapshots
-restic stats --mode raw-data
+r() { sudo --preserve-env=RESTIC_REPOSITORY,RESTIC_PASSWORD "$RESTIC" "$@"; }
+r check
+r snapshots
+r stats --mode raw-data
 echo
 echo "✔ Sauvegarde terminée sur le T7 Shield. Garde le mot de passe en lieu sûr."
