@@ -86,7 +86,8 @@ for p in homelab Script Git Downloads/leak \
   .claude .claude.json .config/Claude/claude_desktop_config.json \
   .config/Code/User .ssh .gnupg inventaire-kali; do
   [ -e "$H/$p" ] || { printf '  - %s (absent de la Kali)\n' "$p"; continue; }
-  if sudo --preserve-env=RESTIC_REPOSITORY,RESTIC_PASSWORD "$RESTIC" ls latest --tag kali-home "$H/$p" 2>/dev/null | grep -q .; then
+  # (sans pipefail : grep -q s'arrête tôt et interromprait restic → faux négatif)
+  if (set +o pipefail; sudo --preserve-env=RESTIC_REPOSITORY,RESTIC_PASSWORD "$RESTIC" ls latest --tag kali-home "$H/$p" 2>/dev/null | grep -q .); then
     printf '  \033[32m✔\033[0m %s\n' "$p"
   else
     printf '  \033[31m✘ %s MANQUANT dans la sauvegarde\033[0m\n' "$p"
