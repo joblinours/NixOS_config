@@ -1,0 +1,5 @@
+result
+result-*
+*.qcow2
+# Ne JAMAIS versionner une clé privée age
+keys.txt

@@ -1,0 +1,11 @@
+# Qui peut déchiffrer secrets/*.yaml. Rempli par scripts/init-secrets.sh :
+#   &lucas : ta clé age perso  (age-keygen -y ~/.config/sops/age/keys.txt)
+#   &host  : clé age de l'host (ssh-to-age < /etc/ssh/ssh_host_ed25519_key.pub)
+# Après ajout d'une clé : sops updatekeys secrets/secrets.yaml
+keys:
+  - &lucas AGE_CLE_PERSO_A_REMPLACER
+creation_rules:
+  - path_regex: secrets/[^/]+\.yaml$
+    key_groups:
+      - age:
+          - *lucas
