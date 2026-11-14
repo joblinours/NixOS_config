@@ -120,6 +120,13 @@ if [ "$FORMAT" -eq 1 ]; then
   partprobe 2>/dev/null || true
   rm -f /run/blkid/blkid.tab* # cache blkid périmé
   udevadm settle
+  # Sur certaines ISO, `mount` sans -t ne reconnaît pas la partition btrfs et
+  # tente NTFS (« NTFS signature is missing ») : or disko monte sans -t. On lui
+  # fait essayer btrfs puis vfat en premier (fichier propre à l'ISO, en RAM).
+  if ! grep -qx btrfs /etc/filesystems 2>/dev/null; then
+    { printf 'btrfs\nvfat\n'; cat /etc/filesystems 2>/dev/null || echo '*'; } > /tmp/filesystems.new
+    mv /tmp/filesystems.new /etc/filesystems
+  fi
   # 1. Partitionnement + formatage + montage sur /mnt
   nix run github:nix-community/disko/latest -- --mode destroy,format,mount --yes-wipe-all-disks --flake "$REPO#$HOST"
 fi
