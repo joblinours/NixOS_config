@@ -14,13 +14,9 @@
       }
     ];
 
-    packages = [
-      # Logiciel Stream Deck
-      {
-        appId = "me.amankhanna.opendeck";
-        origin = "flathub";
-      }
-    ];
+    # Les apps sont déclarées dans les modules qui les concernent :
+    #   Fan Control → monitoring.nix ; OpenDeck → peripheriques-tour.nix (tour)
+    packages = [ ];
 
     # Supprime les Flatpak qui ne sont plus déclarés ici
     uninstallUnmanaged = true;

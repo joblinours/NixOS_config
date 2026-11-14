@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installation depuis l'ISO NixOS 26.05 (live, minimal ou graphique), en une ligne :
 #   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/joblinours/NixOS_config/main/scripts/install.sh)" install nix-desktop
-# (ou nix-desktop-vm). Le script clone le dépôt GitHub dans /tmp/NixOS_config.
+# (ou nix-desktop-vm, nix-laptop). Le script clone le dépôt GitHub dans /tmp/NixOS_config.
 # Depuis un clone existant : sudo bash scripts/install.sh <host>
 #
 # ⚠ EFFACE les disques déclarés dans hosts/<host>/default.nix
@@ -9,7 +9,7 @@
 # Relançable : si les disques sont déjà montés sur /mnt (installation interrompue),
 # propose de reprendre sans reformater.
 set -euo pipefail
-HOST="${1:?usage: install.sh <nix-desktop-vm|nix-desktop>}"
+HOST="${1:?usage: install.sh <nix-desktop-vm|nix-desktop|nix-laptop>}"
 REPO_URL="https://github.com/joblinours/NixOS_config.git"
 export NIX_CONFIG="experimental-features = nix-command flakes"
 

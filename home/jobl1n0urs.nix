@@ -135,6 +135,7 @@ in
       cfg = "cd ~/nix-desktop-config";
       lg = "lazygit";
       lzd = "lazydocker";
+      lssh = "lazyssh";
       neofetch = "fastfetch"; # neofetch a été retiré de nixpkgs
       open = "xdg-open"; # comme sur macOS : ouvre avec l'appli par défaut
       # plaso n'est pas dans nixpkgs : image Docker officielle

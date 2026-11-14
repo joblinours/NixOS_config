@@ -17,7 +17,7 @@ check() { local d="$1"; shift; if "$@" >/dev/null 2>&1; then ok "$d"; else ko "$
 sec "1. Système"
 check "NixOS 26.05"               grep -q '^26\.05' /run/current-system/nixos-version
 check "utilisateur = $WANTUSER"   test "$(whoami)" = "$WANTUSER"
-check "hostname nix-desktop*"     sh -c 'hostname | grep -q ^nix-desktop'
+check "hostname nix-*"             sh -c 'hostname | grep -q ^nix-'
 state="$(systemctl is-system-running 2>/dev/null || true)"
 case "$state" in
   running)  ok "systemd : running" ;;
@@ -28,8 +28,12 @@ check "racine en btrfs"           sh -c 'findmnt -no FSTYPE / | grep -q btrfs'
 check "zram actif"                sh -c 'swapon --show | grep -q zram'
 
 sec "2. Réseau"
-case "$(hostname)" in nix-desktop) IP=192.168.1.200 ;; *) IP=192.168.1.201 ;; esac
-check "IP $IP/23"                 sh -c "ip -4 -o addr | grep -q '$IP/23'"
+case "$(hostname)" in nix-desktop) IP=192.168.1.200 ;; nix-laptop) IP=192.168.1.202 ;; *) IP=192.168.1.201 ;; esac
+if [ "$(hostname)" = nix-laptop ] && ! nmcli -t -f NAME con show --active | grep -qx wifi-statique; then
+  wn "laptop hors du wifi maison : IP en DHCP, test de l'IP fixe sauté"
+else
+  check "IP $IP/23"               sh -c "ip -4 -o addr | grep -q '$IP/23'"
+fi
 check "passerelle 192.168.0.1"    sh -c 'ip route | grep -q "default via 192.168.0.1"'
 check "DNS via AdGuard 192.168.1.3" sh -c 'dig +short +time=2 @192.168.1.3 nixos.org | grep -q .'
 check "DNS (nixos.org)"           getent hosts nixos.org
@@ -56,7 +60,7 @@ check "config ghostty"            test -e ~/.config/ghostty/config
 
 sec "5. Outils"
 for c in ghostty nano code claude claude-desktop obsidian VirtualBox docker lazydocker lazygit brave firefox discord \
-         remmina sshm python3 uv burpsuite wireshark tshark nmap hashcat john vulnx searchsploit qFlipper lm-studio \
+         remmina sshm lazyssh sensors python3 uv burpsuite wireshark tshark nmap hashcat john vulnx searchsploit qFlipper lm-studio \
          anydesk bitwarden bw clamscan gdu dust baobab easyeffects mpv celluloid loupe papers gcc clang make cmake gdb \
          valgrind rustup node pnpm go java ghidra obs steam Telegram signal-desktop \
          fls autopsy yara capa floss die upx readpe triage flatpak \

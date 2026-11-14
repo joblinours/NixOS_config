@@ -35,5 +35,6 @@
     # Git / SSH
     lazygit
     sshm
+    lazyssh # TUI de gestion SSH (lit ~/.ssh/config) ; alias lssh
   ];
 }

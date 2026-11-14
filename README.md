@@ -6,17 +6,18 @@ Poste de travail NixOS 26.05 de Lucas. Au programme :
 - dev : C, Rust, Python/uv, Node, Go, Java ;
 - pentest, DFIR, ArtCraft.
 
-Deux hosts partagent le même socle :
+Trois hosts partagent le même socle :
 
 | Host | Cible | Spécificités |
 |---|---|---|
 | `nix-desktop-vm` | VM VirtualBox (test) | additions invité, `/dev/sda` |
-| `nix-desktop` | tour Intel + RTX 4060 | NVIDIA, VirtualBox hôte, `/dev/nvme0n1` |
+| `nix-desktop` | tour Intel + RTX 4060 | NVIDIA, VirtualBox hôte, OpenRGB, OpenDeck (+ Ajazz AKP05, Sho Metrics) |
+| `nix-laptop` | laptop | DHCP sauf wifi maison, profils d'énergie, VirtualBox hôte |
 
 | Réglage | Valeur |
 |---|---|
 | Utilisateur | `jobl1n0urs` |
-| IP | tour `192.168.1.200`, VM `192.168.1.201` (/23), passerelle `192.168.0.1`, DNS AdGuard `192.168.1.3` |
+| IP | tour `192.168.1.200` (Ethernet et wifi), VM `192.168.1.201`, laptop DHCP sauf `192.168.1.202` sur le wifi `Jobl'Internet` (/23), passerelle `192.168.0.1`, DNS AdGuard `192.168.1.3` |
 | Accès | SSH par clé uniquement |
 
 
@@ -30,10 +31,14 @@ modules/default.nix     socle importé par les deux hosts
   auto-upgrade.nix      mise à jour automatique hebdomadaire (flake update + système au prochain boot)
   disk.nix              disko : GPT + ESP 1G + btrfs (@, @home, @nix, @log, @snapshots), zstd ;
                         disques de données facultatifs réunis sur /data (lucas.disk.dataDevices)
-  network.nix           NetworkManager, profil statique « lan-statique »
+  network.nix           NetworkManager : IP fixe Ethernet (lucas.network.address) et/ou sur le wifi
+                        maison (lucas.network.wifi.*), DHCP sinon
+  monitoring.nix        lm_sensors, Fan Control (Flatpak) + règle udev PWM
   desktop.nix           PipeWire, Bluetooth, impression, polices (Nerd Font, Awesome Terminal Fonts)
   plasma.nix            KDE Plasma 6, écran de connexion SDDM WhiteSur, thèmes macOS, Kvantum, coins arrondis
   nvidia.nix            (tour seulement) pilote ouvert, modesetting, nvidia-container-toolkit
+  peripheriques-tour.nix (tour seulement) OpenRGB, OpenDeck + udev Elgato/Ajazz AKP05,
+                        démon Sho Metrics (plugin OpenDeck) + LACT
   virtualisation.nix    Docker, lazydocker, VirtualBox hôte (lucas.vbox.enable)
   security.nix          nftables (22 seul), OpenSSH par clé, ClamAV
   apps.nix              navigateurs, messageries, Obsidian, Bitwarden, OBS, LM Studio, multimédia,
@@ -44,15 +49,16 @@ modules/default.nix     socle importé par les deux hosts
   dev.nix               toolchains + claude-code
   pentest.nix           nmap, Burp, Wireshark, hashcat, john, exploitdb, vulnx, Ghidra
   dfir.nix              lucas.dfir.* : sleuthkit, Autopsy, yara, capa, floss, DIE, pev, triage…
-  flatpak.nix           OpenDeck (Flathub)
+  flatpak.nix           Flathub (les apps sont déclarées dans monitoring.nix / peripheriques-tour.nix)
   secrets.nix           sops-nix : mot de passe de l'utilisateur
 home/jobl1n0urs.nix     zsh + Oh My Zsh + p10k, Ghostty, git, direnv, fzf, VS Code, EasyEffects, alias open
 home/p10k.zsh           ta config powerlevel10k (copiée à l'identique)
 home/plasma.nix         Plasma façon macOS (plasma-manager) : barre de menus, dock, thème, effets, KRunner
 pkgs/                   triage (script maison), capa (binaire Mandiant), claude-desktop (.deb officiel),
-                        awesome-terminal-fonts (icônes du prompt)
+                        awesome-terminal-fonts (icônes du prompt), sho-metrics-helper (démon du plugin OpenDeck)
 shells/dfir.nix         nix develop .#dfir (volatility3…)
-scripts/                install.sh, init-secrets.sh, add-host-key.sh, test.sh
+scripts/                install.sh, init-secrets.sh, add-host-key.sh, test.sh,
+                        netbox-ssh-config.sh (~/.ssh/config depuis la CMDB NetBox, pour lazyssh)
 ```
 
 ## 1. Préparer la VM VirtualBox
@@ -324,6 +330,19 @@ Ne restaure jamais directement sur `~` : ta config (zsh, Ghostty, KDE…) est g�
 Pour les gros éléments, restaure directement sur `/data` :
 - VMs : `restic restore latest --tag vm --target /data/vms` ;
 - modèles : `--tag ollama --target /data/modeles`.
+
+## 6. Installer le laptop (`nix-laptop`)
+
+Même socle que la tour, sans NVIDIA, OpenRGB ni OpenDeck. Réseau en DHCP partout, sauf sur le wifi `Jobl'Internet` où il prend `192.168.1.202` (profil `wifi-statique`).
+
+1. **Avant** : dans `hosts/nix-laptop/default.nix`, remplace `lucas.disk.device` par le chemin stable du SSD interne (`ls -l /dev/disk/by-id/` depuis l'ISO). Commite et pousse.
+2. Démarre sur l'ISO NixOS 26.05 en **mode UEFI**, connecte le wifi (`nmtui`), puis :
+   ```bash
+   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/joblinours/NixOS_config/main/scripts/install.sh)" install nix-laptop
+   ```
+   Le script régénère `hardware-configuration.nix` (réponds `O`), affiche le disque qui sera effacé, puis demande `OUI`.
+3. Au premier démarrage : connecte le wifi maison une fois (`nmcli con up wifi-statique --ask`, ou depuis KDE), puis `scripts/test.sh`. Commite le `hardware-configuration.nix` généré.
+4. GPU NVIDIA dédié (laptop hybride) : à ajouter à part (`hardware.nvidia.prime`), `nvidia.nix` seul ne suffit pas.
 
 ## Points connus
 

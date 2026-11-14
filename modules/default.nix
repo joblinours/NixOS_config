@@ -12,6 +12,7 @@
     ./apps.nix
     ./network-tools.nix
     ./gaming.nix
+    ./monitoring.nix
     ./vm.nix
     ./dev.nix
     ./pentest.nix

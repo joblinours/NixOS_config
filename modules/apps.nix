@@ -33,11 +33,7 @@
   };
   # Bluetooth : gestionnaire intégré à KDE (Bluedevil) et à COSMIC
 
-  # OpenDeck (Flatpak, voir flatpak.nix) : accès aux Stream Deck Elgato sans root
-  services.udev.extraRules = ''
-    SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", TAG+="uaccess"
-    KERNEL=="hidraw*", ATTRS{idVendor}=="0fd9", TAG+="uaccess"
-  '';
+  # OpenRGB, OpenDeck (Stream Deck) : modules/peripheriques-tour.nix (tour seulement)
 
   environment.systemPackages = with pkgs; [
     # Navigateurs

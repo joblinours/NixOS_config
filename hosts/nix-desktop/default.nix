@@ -6,11 +6,18 @@
   imports = [
     ../../modules
     ../../modules/nvidia.nix
+    ../../modules/peripheriques-tour.nix # OpenRGB, OpenDeck, Sho Metrics
     ./hardware-configuration.nix
   ];
 
   networking.hostName = hostname;
   lucas.network.address = "192.168.1.200";
+  # Même IP fixe en wifi (sinon DHCP en 192.168.0.x, bloqué par le pare-feu du lab)
+  lucas.network.wifi.ssid = "Jobl'Internet";
+  # Modules capteurs proposés par `sudo sensors-detect` (ventilos de la carte mère) :
+  boot.kernelModules = [
+    # "nct6775"
+  ];
   # ⚠ TOUS les disques listés ici sont EFFACÉS à l'installation.
   # Utiliser les chemins stables /dev/disk/by-id/… (ls -l /dev/disk/by-id/), jamais
   # /dev/sdX ou /dev/nvmeXn1 : leur numérotation peut changer d'un démarrage à l'autre.

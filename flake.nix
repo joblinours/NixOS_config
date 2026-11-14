@@ -1,5 +1,5 @@
 {
-  description = "NixOS desktop de Lucas — COSMIC, dev, pentest, DFIR (VM VirtualBox puis tour RTX 4060)";
+  description = "NixOS de Lucas — Plasma, dev, pentest, DFIR (VM VirtualBox, tour RTX 4060, laptop)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -72,9 +72,11 @@
     {
       # sudo nixos-rebuild switch --flake .#nix-desktop-vm   (VM VirtualBox de test)
       # sudo nixos-rebuild switch --flake .#nix-desktop      (tour, RTX 4060)
+      # sudo nixos-rebuild switch --flake .#nix-laptop       (laptop)
       nixosConfigurations = {
         nix-desktop-vm = mkHost "nix-desktop-vm";
         nix-desktop = mkHost "nix-desktop";
+        nix-laptop = mkHost "nix-laptop";
       };
 
       # Paquets maison : nix build .#triage / .#capa / .#claude-desktop
@@ -89,6 +91,8 @@
         triage = final.callPackage ./pkgs/triage/package.nix { };
         capa = final.callPackage ./pkgs/capa/package.nix { };
         awesome-terminal-fonts = final.callPackage ./pkgs/awesome-terminal-fonts/package.nix { };
+        # Démon du plugin OpenDeck Sho Metrics (modules/peripheriques-tour.nix)
+        sho-metrics-helper = final.callPackage ./pkgs/sho-metrics-helper/package.nix { };
         # .deb officiel d'Anthropic dans un environnement FHS (voir pkgs/claude-desktop)
         claude-desktop = final.callPackage ./pkgs/claude-desktop/package.nix { };
 
