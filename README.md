@@ -336,7 +336,7 @@ Pour les gros éléments, restaure directement sur `/data` :
 
 Même socle que la tour (NVIDIA comprise, en mode hybride), sans OpenRGB ni OpenDeck. Réseau en DHCP partout, sauf sur le wifi `Jobl'Internet` où il prend `192.168.1.202` (profil `wifi-statique`).
 
-1. **Avant** : dans `hosts/nix-laptop/default.nix`, remplace `lucas.disk.device` par le chemin stable du SSD interne (`ls -l /dev/disk/by-id/` depuis l'ISO). Commite et pousse.
+1. Les **deux SSD internes** sont effacés : `nvme0n1` (système) et `nvme1n1` (`/data`). Le script affiche leurs modèles avant de demander `OUI` : vérifie qu'aucun disque externe n'est dans la liste.
 2. Démarre sur l'ISO NixOS 26.05 en **mode UEFI**, connecte le wifi (`nmtui`), puis :
    ```bash
    sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/joblinours/NixOS_config/main/scripts/install.sh)" install nix-laptop

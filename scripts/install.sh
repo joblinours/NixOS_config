@@ -107,6 +107,19 @@ if [ "$FORMAT" -eq 1 ]; then
   read -rp "Tout effacer sur les $(( ${#DATA[@]} + 1 )) disque(s) ci-dessus ? Taper OUI : " ans
   [ "$ans" = "OUI" ] || exit 1
   swapoff /mnt/.swapfile 2>/dev/null || true
+  umount -R /mnt 2>/dev/null || true
+  # 0. Effacement complet AVANT disko : les anciennes signatures (NTFS de Windows,
+  #    ext4…) peuvent survivre sous les nouvelles partitions et faire échouer le
+  #    montage (« NTFS signature is missing » sur la partition btrfs).
+  for d in "$DISK" "${DATA[@]}"; do
+    echo "→ Effacement de $d"
+    for p in $(lsblk -nrpo NAME "$d" | tail -n +2); do wipefs -af "$p" >/dev/null || true; done
+    wipefs -af "$d" >/dev/null
+    blkdiscard -f "$d" 2>/dev/null || dd if=/dev/zero of="$d" bs=1M count=64 status=none
+  done
+  partprobe 2>/dev/null || true
+  rm -f /run/blkid/blkid.tab* # cache blkid périmé
+  udevadm settle
   # 1. Partitionnement + formatage + montage sur /mnt
   nix run github:nix-community/disko/latest -- --mode destroy,format,mount --yes-wipe-all-disks --flake "$REPO#$HOST"
 fi

@@ -23,11 +23,16 @@
     address = "192.168.1.202";
   };
 
-  # ── Disque ────────────────────────────────────────────────────────
-  # ⚠ EFFACÉ à l'installation. Remplacer par le chemin stable du SSD interne :
-  #   ls -l /dev/disk/by-id/  →  "/dev/disk/by-id/nvme-<modèle>_<n° de série>"
-  # Ne JAMAIS y mettre une clé USB ou un disque externe.
+  # ── Disques ───────────────────────────────────────────────────────
+  # ⚠ Les DEUX SSD internes (ex-Windows et ex-Kali) sont EFFACÉS à l'installation :
+  # le 1er porte le système, le 2e devient /data (comme sur la tour).
+  # Avec 2 NVMe, nvme0/nvme1 peuvent s'inverser d'un démarrage à l'autre : sans
+  # importance ici (les deux sont effacés, install.sh affiche les modèles avant
+  # confirmation ; ensuite tout est monté par étiquette). Chemins stables :
+  #   ls -l /dev/disk/by-id/ | grep nvme | grep -v part
+  # Ne JAMAIS y mettre une clé USB ou un disque externe (T7 Shield…).
   lucas.disk.device = "/dev/nvme0n1";
+  lucas.disk.dataDevices = [ "/dev/nvme1n1" ];
 
   # ── Spécificités portable ─────────────────────────────────────────
   # Profils d'énergie (Économie / Équilibré / Performance) dans la barre de KDE
