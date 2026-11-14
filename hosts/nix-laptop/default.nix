@@ -1,5 +1,5 @@
-# Laptop. Même socle que la tour, sans NVIDIA ni périphériques de bureau
-# (OpenRGB, OpenDeck). Réseau en DHCP partout, sauf 192.168.1.202 sur le wifi maison.
+# Laptop (GTX 1660 Ti, hybride). Même socle que la tour, sans périphériques de
+# bureau (OpenRGB, OpenDeck). Réseau en DHCP partout, sauf 192.168.1.202 sur le wifi maison.
 # Avant l'installation : renseigner le disque (lsblk, ls -l /dev/disk/by-id/) ;
 # install.sh régénère hardware-configuration.nix sur la machine.
 { hostname, ... }:
@@ -7,9 +7,12 @@
   imports = [
     ../../modules
     ./hardware-configuration.nix
-    # GPU NVIDIA dédié ? Pour un laptop hybride (Optimus), nvidia.nix ne suffit pas :
-    # il faut en plus hardware.nvidia.prime (bus ID iGPU/dGPU, voir `lspci`).
+    ../../modules/nvidia.nix
+    ./prime.nix # adresses PCI des GPU (remplies par install.sh)
   ];
+
+  # GTX 1660 Ti + iGPU : PRIME offload (`nvidia-offload <appli>`)
+  lucas.nvidia.hybrid = true;
 
   networking.hostName = hostname;
 

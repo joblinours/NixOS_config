@@ -40,6 +40,38 @@ if [ "$HOST" != nix-desktop-vm ] && [ -f "$REPO/hosts/$HOST/hardware-configurati
   fi
 fi
 
+# Laptop hybride : adresses PCI des GPU pour PRIME offload (hosts/<host>/prime.nix)
+if [ -f "$REPO/hosts/$HOST/prime.nix" ]; then
+  lspci_() { if command -v lspci >/dev/null; then lspci "$@"; else nix shell nixpkgs#pciutils -c lspci "$@"; fi; }
+  # « 0000:01:00.0 » → « PCI:1:0:0 » (bus et device en décimal)
+  busid() { local a="${1#*:}" b d; b="${a%%:*}"; d="${a#*:}"; printf 'PCI:%d:%d:%d' "$((16#$b))" "$((16#${d%%.*}))" "${d##*.}"; }
+  NV="" INTEL="" AMD=""
+  while read -r addr vendor; do
+    case "$vendor" in
+      10de) NV="$(busid "$addr")" ;;
+      8086) INTEL="$(busid "$addr")" ;;
+      1002) AMD="$(busid "$addr")" ;;
+    esac
+  done < <(lspci_ -Dn | awk '$2 ~ /^03(00|02|80):$/ { split($3, id, ":"); print $1, id[1] }')
+  q() { [ -n "$1" ] && printf '"%s"' "$1" || printf 'null'; }
+  if [ -n "$NV" ] && { [ -n "$INTEL" ] || [ -n "$AMD" ]; }; then
+    cat > "$REPO/hosts/$HOST/prime.nix" <<NIX
+# Adresses PCI des GPU pour PRIME offload (modules/nvidia.nix).
+# Générées par scripts/install.sh (lspci) le $(date +%F) — à committer.
+{
+  lucas.nvidia.prime = {
+    nvidiaBusId = $(q "$NV");
+    intelBusId = $(q "$INTEL");
+    amdgpuBusId = $(q "$AMD");
+  };
+}
+NIX
+    echo "✔ GPU détectés : NVIDIA $NV${INTEL:+, Intel $INTEL}${AMD:+, AMD $AMD} (hosts/$HOST/prime.nix)"
+  else
+    echo "⚠ GPU hybride non détecté (NVIDIA « $NV », iGPU « $INTEL$AMD ») : PRIME offload désactivé, voir hosts/$HOST/prime.nix"
+  fi
+fi
+
 DISK="$(nix eval --raw "$REPO#nixosConfigurations.$HOST.config.lucas.disk.device")"
 mapfile -t DATA < <(nix eval --json "$REPO#nixosConfigurations.$HOST.config.lucas.disk.dataDevices" | tr -d '[]"' | tr ',' '\n' | grep .)
 echo "Host : $HOST"
