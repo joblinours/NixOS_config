@@ -12,12 +12,12 @@ Trois hosts partagent le même socle :
 |---|---|---|
 | `nix-desktop-vm` | VM VirtualBox (test) | additions invité, `/dev/sda` |
 | `nix-desktop` | tour Intel + RTX 4060 | NVIDIA, VirtualBox hôte, OpenRGB, OpenDeck (+ Ajazz AKP05, Sho Metrics) |
-| `nix-laptop` | laptop GTX 1660 Ti | NVIDIA en PRIME offload, DHCP sauf wifi maison, profils d'énergie, VirtualBox hôte |
+| `nix-laptop` | laptop GTX 1660 Ti | NVIDIA en PRIME offload, DHCP, profils d'énergie, VirtualBox hôte |
 
 | Réglage | Valeur |
 |---|---|
 | Utilisateur | `jobl1n0urs` |
-| IP | tour `192.168.1.200` (Ethernet et wifi), VM `192.168.1.201`, laptop DHCP sauf `192.168.1.202` sur le wifi `Jobl'Internet` (/23), passerelle `192.168.0.1`, DNS AdGuard `192.168.1.3` |
+| IP | tour `192.168.1.200` en Ethernet et sur le wifi `Jobl'Internet` (/23) ; VM et laptop en DHCP, passerelle `192.168.0.1`, DNS AdGuard `192.168.1.3` |
 | Accès | SSH par clé uniquement |
 
 
@@ -67,7 +67,7 @@ scripts/                install.sh, init-secrets.sh, add-host-key.sh, test.sh,
 - **Système :** activer EFI. Prévoir au moins 8 Go de RAM et 4 vCPU.
 - **Affichage :** VMSVGA, accélération 3D, 128 Mo de vidéo.
 - **Disque :** au moins 60 Go (VDI dynamique).
-- **Réseau :** carte 1 en **accès par pont** sur la carte physique. C'est obligatoire pour obtenir 192.168.1.201.
+- **Réseau :** carte 1 en **accès par pont** sur la carte physique. La VM prend alors une IP en DHCP sur le réseau local.
 - **ISO :** NixOS 26.05 *minimal* (https://nixos.org/download).
 
 ## 2. Avant l'installation (sur ton poste actuel)
@@ -334,7 +334,7 @@ Pour les gros éléments, restaure directement sur `/data` :
 
 ## 6. Installer le laptop (`nix-laptop`)
 
-Même socle que la tour (NVIDIA comprise, en mode hybride), sans OpenRGB ni OpenDeck. Réseau en DHCP partout, sauf sur le wifi `Jobl'Internet` où il prend `192.168.1.202` (profil `wifi-statique`).
+Même socle que la tour (NVIDIA comprise, en mode hybride), sans OpenRGB ni OpenDeck. Réseau en DHCP partout (Ethernet et wifi).
 
 1. Les **deux SSD internes** sont effacés : `nvme0n1` (système) et `nvme1n1` (`/data`). Le script affiche leurs modèles avant de demander `OUI` : vérifie qu'aucun disque externe n'est dans la liste.
 2. Démarre sur l'ISO NixOS 26.05 en **mode UEFI**, connecte le wifi (`nmtui`), puis :
@@ -342,7 +342,7 @@ Même socle que la tour (NVIDIA comprise, en mode hybride), sans OpenRGB ni Open
    sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/joblinours/NixOS_config/main/scripts/install.sh)" install nix-laptop
    ```
    Le script régénère `hardware-configuration.nix` (réponds `O`), affiche le disque qui sera effacé, puis demande `OUI`.
-3. Au premier démarrage : connecte le wifi maison une fois (`nmcli con up wifi-statique --ask`, ou depuis KDE), puis `scripts/test.sh`. Commite le `hardware-configuration.nix` généré.
+3. Au premier démarrage : connecte le wifi depuis KDE (ou `nmtui`), puis `scripts/test.sh`. Commite le `hardware-configuration.nix` généré.
 4. GPU : la GTX 1660 Ti tourne en **PRIME offload**. L'iGPU gère l'écran et la NVIDIA s'éteint quand elle ne sert pas. Pour l'utiliser : `nvidia-offload <appli>`, ou `nvidia-offload %command%` dans les options de lancement Steam. `install.sh` détecte les adresses PCI des deux GPU et remplit `hosts/nix-laptop/prime.nix` (à committer). Vérification : `nvidia-offload glxinfo -B | grep renderer`.
 
 ## Points connus

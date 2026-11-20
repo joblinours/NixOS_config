@@ -3,7 +3,7 @@
 # .sops.yaml et rechiffre les secrets. Ensuite la copie de la clé perso dans
 # /var/lib/sops-nix/key.txt n'est plus indispensable.
 #   bash scripts/add-host-key.sh            (sur le host lui-même)
-#   bash scripts/add-host-key.sh 192.168.1.201   (à distance)
+#   bash scripts/add-host-key.sh <ip-du-host>   (à distance)
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."
 if [ -n "${1:-}" ]; then

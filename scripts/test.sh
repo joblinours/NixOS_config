@@ -28,11 +28,11 @@ check "racine en btrfs"           sh -c 'findmnt -no FSTYPE / | grep -q btrfs'
 check "zram actif"                sh -c 'swapon --show | grep -q zram'
 
 sec "2. Réseau"
-case "$(hostname)" in nix-desktop) IP=192.168.1.200 ;; nix-laptop) IP=192.168.1.202 ;; *) IP=192.168.1.201 ;; esac
-if [ "$(hostname)" = nix-laptop ] && ! nmcli -t -f NAME con show --active | grep -qx wifi-statique; then
-  wn "laptop hors du wifi maison : IP en DHCP, test de l'IP fixe sauté"
+# IP fixe sur la tour seulement ; VM et laptop en DHCP
+if [ "$(hostname)" = nix-desktop ]; then
+  check "IP 192.168.1.200/23"     sh -c "ip -4 -o addr | grep -q '192.168.1.200/23'"
 else
-  check "IP $IP/23"               sh -c "ip -4 -o addr | grep -q '$IP/23'"
+  check "IPv4 obtenue en DHCP"    sh -c "ip -4 -o addr show scope global | grep -q dynamic"
 fi
 check "passerelle 192.168.0.1"    sh -c 'ip route | grep -q "default via 192.168.0.1"'
 check "DNS via AdGuard 192.168.1.3" sh -c 'dig +short +time=2 @192.168.1.3 nixos.org | grep -q .'

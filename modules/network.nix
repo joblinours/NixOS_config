@@ -2,8 +2,8 @@
 #   lucas.network.address       IP fixe en Ethernet (null = DHCP)
 #   lucas.network.wifi.ssid     wifi maison sur lequel forcer une IP fixe (null = aucun)
 #   lucas.network.wifi.address  IP fixe sur ce wifi (par défaut : la même qu'en Ethernet)
-# tour : 192.168.1.200 (Ethernet et wifi) ; VM : 192.168.1.201 ; laptop : DHCP,
-# sauf 192.168.1.202 sur le wifi maison (le pare-feu du lab bloque les 192.168.0.x).
+# tour : 192.168.1.200 (Ethernet et wifi maison, le pare-feu du lab bloque les
+# 192.168.0.x) ; VM et laptop : DHCP partout.
 # Les profils ne sont liés à aucune interface : 1er port Ethernet / 1re carte wifi.
 # Mot de passe wifi : PAS dans le dépôt. Il est lu dans lucas.network.wifi.pskFile
 # (root, chmod 600), une ligne « WIFI_PSK=motdepasse », et stocké côté système

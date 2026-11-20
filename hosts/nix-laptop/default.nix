@@ -1,5 +1,5 @@
 # Laptop (GTX 1660 Ti, hybride). Même socle que la tour, sans périphériques de
-# bureau (OpenRGB, OpenDeck). Réseau en DHCP partout, sauf 192.168.1.202 sur le wifi maison.
+# bureau (OpenRGB, OpenDeck). Réseau en DHCP partout (Ethernet et wifi).
 # Avant l'installation : renseigner le disque (lsblk, ls -l /dev/disk/by-id/) ;
 # install.sh régénère hardware-configuration.nix sur la machine.
 { hostname, ... }:
@@ -16,12 +16,7 @@
 
   networking.hostName = hostname;
 
-  # ── Réseau ────────────────────────────────────────────────────────
-  # Ethernet et autres wifis : DHCP (lucas.network.address laissé à null)
-  lucas.network.wifi = {
-    ssid = "Jobl'Internet"; # casse exacte du SSID
-    address = "192.168.1.202";
-  };
+  # Réseau : DHCP partout (lucas.network.address et wifi.ssid laissés à null)
 
   # ── Disques ───────────────────────────────────────────────────────
   # ⚠ Les DEUX SSD internes (ex-Windows et ex-Kali) sont EFFACÉS à l'installation :

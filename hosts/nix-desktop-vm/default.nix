@@ -9,7 +9,7 @@
   ];
 
   networking.hostName = hostname;
-  lucas.network.address = "192.168.1.201";
+  # Réseau : DHCP (lucas.network.address laissé à null)
   lucas.disk.device = "/dev/sda";
 
   # Additions invité : presse-papiers partagé, redimensionnement de l'écran
