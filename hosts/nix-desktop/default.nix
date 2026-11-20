@@ -11,6 +11,8 @@
   ];
 
   networking.hostName = hostname;
+  # hardware-configuration.nix (généré) ne l'active plus : firmwares + microcode Intel
+  hardware.enableRedistributableFirmware = true;
   lucas.network.address = "192.168.1.200";
   # Même IP fixe en wifi (sinon DHCP en 192.168.0.x, bloqué par le pare-feu du lab)
   lucas.network.wifi.ssid = "Jobl'Internet";

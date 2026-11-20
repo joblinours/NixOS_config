@@ -6,15 +6,21 @@
   ...
 }:
 let
-  # VM VirtualBox : le GPU virtuel n'offre qu'OpenGL 4.1, Ghostty exige 4.3.
-  # → rendu logiciel Mesa (llvmpipe, OpenGL 4.5) pour Ghostty seulement.
-  ghosttyVm = pkgs.symlinkJoin {
-    name = "ghostty-vm";
+  # Ghostty enveloppé :
+  #  - GTK_IM_MODULE=simple : avec le module de saisie par défaut (Plasma/Wayland),
+  #    Ghostty n'envoie plus aucune touche en saisie masquée (sudo, read -s) →
+  #    bloqué sur le cadenas. Le module « simple » garde touches mortes et Compose.
+  #  - VM VirtualBox : le GPU virtuel n'offre qu'OpenGL 4.1, Ghostty exige 4.3.
+  #    → rendu logiciel Mesa (llvmpipe, OpenGL 4.5) pour Ghostty seulement.
+  ghosttyWrapped = pkgs.symlinkJoin {
+    name = "ghostty-wrapped";
     paths = [ pkgs.ghostty ];
     meta.mainProgram = "ghostty";
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
-      wrapProgram $out/bin/ghostty --set LIBGL_ALWAYS_SOFTWARE 1
+      wrapProgram $out/bin/ghostty --set GTK_IM_MODULE simple ${
+        lib.optionalString osConfig.lucas.vm.enable "--set LIBGL_ALWAYS_SOFTWARE 1"
+      }
       # Les lanceurs (.desktop, D-Bus, systemd) pointent vers le binaire d'origine
       for f in $(find -L $out/share/applications $out/share/dbus-1 $out/share/systemd $out/lib/systemd -type f 2>/dev/null); do
         if grep -q "${pkgs.ghostty}/bin/ghostty" "$f"; then
@@ -47,6 +53,7 @@ in
     autojump # plugin Oh My Zsh « autojump » (commande j)
     zsh-completions # complétions supplémentaires
     imagemagick # plugin « catimg »
+    ffmpeg # conversion audio/vidéo (aussi aperçus vidéo dans yazi)
   ];
 
   # Autopsy : son paquet ne fournit pas d'entrée de menu
@@ -129,7 +136,12 @@ in
     ];
 
     shellAliases = {
-      ll = "eza -la --git";
+      # eza avec icônes de type de fichier / dossier (police Nerd Font requise)
+      ls = "eza --icons=auto --group-directories-first";
+      ll = "eza -la --git --icons=auto --group-directories-first";
+      la = "eza -a --icons=auto --group-directories-first";
+      lt = "eza --tree --level=2 --icons=auto --group-directories-first";
+      tree = "eza --tree --icons=auto --group-directories-first"; # -L N, -a comme tree
       cat = "bat --paging=never";
       rebuild = "nh os switch";
       cfg = "cd ~/nix-desktop-config";
@@ -146,7 +158,7 @@ in
   # ── Ghostty ───────────────────────────────────────────────────────
   programs.ghostty = {
     enable = true;
-    package = if osConfig.lucas.vm.enable then ghosttyVm else pkgs.ghostty;
+    package = ghosttyWrapped; # voir let : saisie masquée + VM
     enableZshIntegration = true;
     # Style macOS : couleurs Apple, fond translucide flouté par KWin
     settings = {
@@ -172,6 +184,13 @@ in
     enable = true; # Ctrl+R amélioré
     enableZshIntegration = false; # fourni par le plugin Oh My Zsh « fzf »
   };
+  # Gestionnaire de fichiers en terminal. `y` lance yazi et, en quittant,
+  # place le shell dans le dossier où l'on se trouvait.
+  programs.yazi = {
+    enable = true;
+    enableZshIntegration = true;
+    shellWrapperName = "y";
+  };
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true; # .envrc contenant `use flake`
@@ -179,8 +198,14 @@ in
 
   programs.git = {
     enable = true;
-    # Identité à compléter :
-    # settings.user = { name = "Lucas"; email = "…"; };
+    settings = {
+      user = {
+        name = "joblinours";
+        email = "lucas.joblin@gmail.com";
+      };
+      # ⚠ Jeton HTTPS stocké EN CLAIR dans ~/.git-credentials (chmod 600)
+      credential.helper = "store";
+    };
   };
 
   # ── VS Code ───────────────────────────────────────────────────────

@@ -5,8 +5,12 @@
 # tour : 192.168.1.200 (Ethernet et wifi) ; VM : 192.168.1.201 ; laptop : DHCP,
 # sauf 192.168.1.202 sur le wifi maison (le pare-feu du lab bloque les 192.168.0.x).
 # Les profils ne sont liés à aucune interface : 1er port Ethernet / 1re carte wifi.
-# Mot de passe wifi : PAS dans le dépôt ; KDE le demande à la 1re connexion et le
-# garde dans KWallet (ou `nmcli con up wifi-statique --ask`).
+# Mot de passe wifi : PAS dans le dépôt. Il est lu dans lucas.network.wifi.pskFile
+# (root, chmod 600), une ligne « WIFI_PSK=motdepasse », et stocké côté système
+# pour que le wifi monte dès le boot. Avec un agent (KWallet), il n'existait qu'après
+# le login et NetworkManager retombait sur le profil DHCP créé par KDE.
+# ⚠ Ce fichier doit exister AVANT le rebuild, sinon NetworkManager-ensure-profiles
+# échoue et aucun profil (Ethernet compris) n'est créé.
 # Les autres wifis (créés depuis KDE) restent en DHCP.
 { config, lib, ... }:
 let
@@ -40,6 +44,11 @@ in
         example = "192.168.1.202";
         description = "IPv4 fixe sur ce wifi.";
       };
+      pskFile = lib.mkOption {
+        type = lib.types.path;
+        default = "/etc/nixos/secrets/wifi.env";
+        description = "Fichier root (hors dépôt) contenant « WIFI_PSK=motdepasse ».";
+      };
     };
   };
 
@@ -53,6 +62,7 @@ in
 
     networking.networkmanager = {
       enable = true;
+      ensureProfiles.environmentFiles = lib.optional (cfg.wifi.ssid != null) cfg.wifi.pskFile;
       ensureProfiles.profiles =
         lib.optionalAttrs (cfg.address != null) {
           lan-statique = {
@@ -81,7 +91,8 @@ in
             };
             wifi-security = {
               key-mgmt = "wpa-psk";
-              psk-flags = 1; # mot de passe gardé par l'agent (KWallet), pas dans /etc
+              psk = "$WIFI_PSK"; # substitué depuis wifi.pskFile au boot
+              psk-flags = 0; # stocké côté système : dispo avant le login
             };
             ipv4 = staticIpv4 cfg.wifi.address;
             ipv6.method = "disabled";
